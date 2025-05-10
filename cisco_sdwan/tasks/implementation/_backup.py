@@ -1,3 +1,11 @@
+"""
+Backup task implementation module for Cisco SD-WAN (Sastre).
+
+This module provides functionality to backup vManage configuration items to a local directory or zip archive.
+It supports selective backup based on tags and regular expressions, and includes special handling for
+device templates, config groups, and running configurations.
+"""
+
 import argparse
 from typing import Union, Optional
 from pydantic import model_validator, field_validator
@@ -17,8 +25,25 @@ from cisco_sdwan.tasks.validators import validate_regex, validate_filename
 
 @TaskOptions.register('backup')
 class TaskBackup(Task):
+    """
+    Task implementation for backing up vManage configuration items.
+    
+    This class provides functionality to backup vManage configuration items to a local
+    directory or zip archive. It supports selective backup based on tags and regular expressions,
+    and includes special handling for device templates, config groups, and running configurations.
+    """
     @staticmethod
     def parser(task_args, target_address=None):
+        """
+        Parse command-line arguments for the backup task.
+        
+        Args:
+            task_args: List of command-line arguments specific to the backup task
+            target_address: vManage IP address or hostname, used for default workdir name
+            
+        Returns:
+            Namespace containing the parsed arguments
+        """
         task_parser = argparse.ArgumentParser(description=f'{title}\nBackup task:')
         task_parser.prog = f'{task_parser.prog} backup'
         task_parser.formatter_class = argparse.RawDescriptionHelpFormatter
@@ -49,6 +74,20 @@ class TaskBackup(Task):
         return task_parser.parse_args(task_args)
 
     def runner(self, parsed_args, api: Optional[Rest] = None) -> Union[None, list]:
+        """
+        Execute the backup task with the specified arguments.
+        
+        This method performs the actual backup operation, saving vManage configuration items
+        to the specified workdir or archive file. It handles special cases for device templates,
+        config groups, and optionally saves running configurations.
+        
+        Args:
+            parsed_args: Namespace containing the parsed command-line arguments
+            api: REST API client instance for vManage
+            
+        Returns:
+            None or a list (when used programmatically)
+        """
         if parsed_args.archive:
             self.log_info(f'Backup task: vManage URL: "{api.base_url}" -> Local archive file: "{parsed_args.archive}"')
             parsed_args.workdir = str(uuid4())
@@ -142,6 +181,16 @@ class TaskBackup(Task):
         return
 
     def save_running_configs(self, api: Optional[Rest], workdir: str) -> None:
+        """
+        Save running configurations from all devices in the inventory.
+        
+        This method retrieves and saves both CFS (Cisco Feature Set) and RFS (Running Feature Set)
+        configurations from all controllers and, if applicable, WAN edge devices.
+        
+        Args:
+            api: REST API client instance for vManage
+            workdir: Directory path where configurations will be saved
+        """
         inventory_list = [(ControlInventory.get(api), 'controller')]
         if not api.is_provider or api.is_tenant_scope:
             inventory_list.append((EdgeInventory.get(api), 'WAN edge'))
@@ -166,6 +215,13 @@ class TaskBackup(Task):
 
 
 class BackupArgs(TaskArgs):
+    """
+    Pydantic model for backup task arguments with validation.
+    
+    This class defines the arguments accepted by the backup task and provides
+    validation for those arguments. It ensures that mutually exclusive arguments
+    are not provided together and that filenames and regular expressions are valid.
+    """
     archive: Optional[str] = None
     workdir: Optional[str] = None
     regex: Optional[str] = None
@@ -180,6 +236,19 @@ class BackupArgs(TaskArgs):
 
     @model_validator(mode='after')
     def mutex_validations(self) -> 'BackupArgs':
+        """
+        Validate mutually exclusive arguments.
+        
+        This method ensures that:
+        1. Either 'archive' or 'workdir' is provided, but not both
+        2. 'regex' and 'not_regex' are not provided together
+        
+        Returns:
+            The validated BackupArgs instance
+            
+        Raises:
+            ValueError: If validation fails
+        """
         if bool(self.archive) == bool(self.workdir):
             raise ValueError('Either "archive" or "workdir" must to be provided')
 
