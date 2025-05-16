@@ -9,8 +9,8 @@ import re
 import argparse
 from datetime import date
 from getpass import getpass
-from typing import Callable, Optional, Dict, List, Set, Union, Type, Any, TypeVar
-from collections.abc import Iterable
+from typing import Optional, Dict, List, Set, Union, Type, Any
+from collections.abc import Callable, Iterable
 from cisco_sdwan.base.catalog import catalog_tags, op_catalog_tags, op_catalog_commands, CATALOG_TAG_ALL, OpType
 from cisco_sdwan.tasks.common import Task
 from cisco_sdwan.tasks.validators import (validate_workdir, validate_regex, validate_existing_file, validate_zip_file,
