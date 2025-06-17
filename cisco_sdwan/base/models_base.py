@@ -41,9 +41,8 @@ class UpdateEval:
         """
         Initialize UpdateEval with response data from vManage update operations.
         
-        Args:
-            data: Response data from vManage API update operations. Can be a list
-                 (for policy updates) or dict (for template updates).
+        @param data: Response data from vManage API update operations. Can be a list
+                     (for policy updates) or dict (for template updates).
         """
         self.is_policy = isinstance(data, list)
         # Master template updates (PUT requests) return a dict containing 'data' key. Non-master templates don't.
@@ -57,8 +56,7 @@ class UpdateEval:
         """
         Determine if template reattachment is required after the update.
         
-        Returns:
-            bool: True if template reattachment is needed, False otherwise.
+        @return: True if template reattachment is needed, False otherwise.
         """
         return not self.is_policy and 'processId' in self.data
 
@@ -67,8 +65,7 @@ class UpdateEval:
         """
         Determine if policy reactivation is required after the update.
         
-        Returns:
-            bool: True if policy reactivation is needed, False otherwise.
+        @return: True if policy reactivation is needed, False otherwise.
         """
         return self.is_policy and len(self.data) > 0
 
@@ -76,8 +73,7 @@ class UpdateEval:
         """
         Iterate over master templates affected by the update operation.
         
-        Returns:
-            Iterator: Iterator over affected master template identifiers.
+        @return: Iterator over affected master template identifiers.
         """
         return iter(self.data.get('masterTemplatesAffected', []))
 
@@ -85,8 +81,7 @@ class UpdateEval:
         """
         Return formatted JSON string representation of the data.
         
-        Returns:
-            str: Pretty-printed JSON representation of the update data.
+        @return: Pretty-printed JSON representation of the update data.
         """
         return json.dumps(self.data, indent=2)
 
@@ -94,8 +89,7 @@ class UpdateEval:
         """
         Return compact JSON string representation of the data.
         
-        Returns:
-            str: Compact JSON representation of the update data.
+        @return: Compact JSON representation of the update data.
         """
         return json.dumps(self.data)
 
@@ -115,13 +109,12 @@ class ApiPath:
         """
         Initialize ApiPath with operation-specific URL paths.
         
-        Args:
-            get: URL path for GET operations
-            other_ops: URL paths for POST, PUT and DELETE operations, in this order. 
-                      If an item is not specified, the same URL as the last operation 
-                      provided is used.
-            path_vars: Path variable names that may be present in defined paths. 
-                      It is assumed that all methods have the same path variables.
+        @param get: URL path for GET operations
+        @param other_ops: URL paths for POST, PUT and DELETE operations, in this order. 
+                         If an item is not specified, the same URL as the last operation 
+                         provided is used.
+        @param path_vars: Path variable names that may be present in defined paths. 
+                         It is assumed that all methods have the same path variables.
         """
         self.get = get
         last_op = other_ops[-1] if other_ops else get
@@ -166,6 +159,11 @@ class ApiPath:
         return ApiPath(*tuple(resolve_path(field) for field in self.__slots__[1:]))
 
     def __repr__(self) -> str:
+        """
+        Return string representation of the ApiPath instance.
+        
+        @return: String representation showing class name and path configurations.
+        """
         path_vars = f", path_vars=[{', '.join(self.path_vars)}]" if self.path_vars else ""
         return f"{self.__class__.__name__}({self.get}, {self.post}, {self.put}, {self.delete}{path_vars})"
 
@@ -174,12 +172,8 @@ class ApiPath:
         """
         Discover path variables in a URL template string.
         
-        Args:
-            path_template: URL template string containing path variables in {var} format.
-            
-        Returns:
-            tuple: Tuple of path variable names found in the template. 
-                  Empty tuple if no path variables are discovered.
+        @param path_template: URL template string containing path variables in {var} format.
+        @return: Tuple of path variable names found in the template. Empty tuple if no path variables are discovered.
         """
         # If no path variable is discovered, an empty tuple is returned
         return tuple(m.group(1) for m in re.finditer(r'{\s*([^}\s][^}]*?)\s*}', path_template))
@@ -197,9 +191,8 @@ class CliOrFeatureApiPath:
         """
         Initialize with both feature and CLI API paths.
         
-        Args:
-            api_path_feature: ApiPath instance for feature templates.
-            api_path_cli: ApiPath instance for CLI templates.
+        @param api_path_feature: ApiPath instance for feature templates.
+        @param api_path_cli: ApiPath instance for CLI templates.
         """
         self.api_path_feature = api_path_feature
         self.api_path_cli = api_path_cli
@@ -208,12 +201,9 @@ class CliOrFeatureApiPath:
         """
         Return the appropriate API path based on template type.
         
-        Args:
-            instance: Template instance (None when accessed from class).
-            owner: Template class.
-            
-        Returns:
-            ApiPath: CLI API path if instance is CLI template, feature API path otherwise.
+        @param instance: Template instance (None when accessed from class).
+        @param owner: Template class.
+        @return: CLI API path if instance is CLI template, feature API path otherwise.
         """
         # If called from class, assume it is a feature template
         is_cli_template = instance is not None and instance.is_type_cli
@@ -244,13 +234,12 @@ class ApiPathGroup:
         """
         Initialize ApiPathGroup with parcel and reference path mappings.
         
-        Args:
-            path_map: Register parcel ApiPaths to a feature profile. 
-                     Mapping of {<parcelType>: ApiPath, ... }
-            parcel_reference_path_map: Register parcel reference ApiPaths to a feature profile. 
-                                      Mapping of {PathKey(<ParcelType>, <parent ParcelType>): ApiPath, ...}
-                                      If ... is used instead of an ApiPath, it means that this reference parcel
-                                      doesn't need to be explicitly created (thus no ApiPath is provided).
+        @param path_map: Register parcel ApiPaths to a feature profile. 
+                        Mapping of {<parcelType>: ApiPath, ... }
+        @param parcel_reference_path_map: Register parcel reference ApiPaths to a feature profile. 
+                                         Mapping of {PathKey(<ParcelType>, <parent ParcelType>): ApiPath, ...}
+                                         If ... is used instead of an ApiPath, it means that this reference parcel
+                                         doesn't need to be explicitly created (thus no ApiPath is provided).
         """
         self._path_map = dict(path_map)
         self._parcel_ref_map = dict(parcel_reference_path_map) if parcel_reference_path_map is not None else {}
@@ -262,13 +251,10 @@ class ApiPathGroup:
         """
         Returns the API path associated with the provided key.
         
-        Args:
-            key: A PathKey to find the API path.
-            
-        Returns:
-            tuple: (<parcel api path>, <is reference>) tuple, where the first element
-                  is the ApiPath or None, and the second element indicates whether 
-                  this is a parcel reference or an actual parcel.
+        @param key: A PathKey to find the API path.
+        @return: (<parcel api path>, <is reference>) tuple, where the first element
+                is the ApiPath or None, and the second element indicates whether 
+                this is a parcel reference or an actual parcel.
         """
         parcel_reference_path = self._parcel_ref_map.get(key)
         if parcel_reference_path is not None:
@@ -281,11 +267,8 @@ class ApiPathGroup:
         """
         Indicates whether the provided parcel_type is a type that can be referenced.
         
-        Args:
-            parcel_type: Parcel type to check.
-            
-        Returns:
-            bool: True if this parcel type is one that can be referenced, False otherwise.
+        @param parcel_type: Parcel type to check.
+        @return: True if this parcel type is one that can be referenced, False otherwise.
         """
         return parcel_type in self._referenced_types
 
@@ -293,11 +276,8 @@ class ApiPathGroup:
         """
         Indicates whether the provided parcel_type is a parent of a type that can be referenced.
         
-        Args:
-            parcel_type: Parcel type to check.
-            
-        Returns:
-            bool: True if this parcel type is parent of one that can be referenced, False otherwise.
+        @param parcel_type: Parcel type to check.
+        @return: True if this parcel type is parent of one that can be referenced, False otherwise.
         """
         return parcel_type in self._parent_types
 
@@ -321,8 +301,7 @@ class OperationalItem:
         """
         Initialize OperationalItem with API response payload.
         
-        Args:
-            payload: API response payload containing header and data sections.
+        @param payload: API response payload containing header and data sections.
         """
         self.timestamp = payload['header']['generatedOn']
 
@@ -340,8 +319,7 @@ class OperationalItem:
         """
         Get all available field names for this operational item.
         
-        Returns:
-            tuple: Tuple of field names available in the operational data.
+        @return: Tuple of field names available in the operational data.
         """
         return tuple(self._meta.keys())
 
@@ -349,14 +327,11 @@ class OperationalItem:
         """
         Retrieve metadata about one or more fields.
         
-        Args:
-            field_names: One or more field names to retrieve metadata from.
-            info: Indicate which metadata to retrieve. By default, field title is returned.
-            default: Value to be returned when a field_name does not exist.
-            
-        Returns:
-            tuple: Tuple with one or more elements representing the desired metadata 
-                  for each field requested.
+        @param field_names: One or more field names to retrieve metadata from.
+        @param info: Indicate which metadata to retrieve. By default, field title is returned.
+        @param default: Value to be returned when a field_name does not exist.
+        @return: Tuple with one or more elements representing the desired metadata 
+                for each field requested.
         """
         if len(field_names) == 1:
             return self._meta.get(field_names[0], {}).get(info, default),
@@ -372,12 +347,9 @@ class OperationalItem:
         returns the converted value. E.g., passing average_latency=int will convert a string 
         average_latency field to an integer.
         
-        Args:
-            field_names: Specify one or more field names to retrieve.
-            conv_fn_map: Keyword arguments passed allow type conversions on fields.
-            
-        Returns:
-            Iterator[namedtuple]: A FieldValue object (named tuple) with attributes for each field_name.
+        @param field_names: Specify one or more field names to retrieve.
+        @param conv_fn_map: Keyword arguments passed allow type conversions on fields.
+        @return: A FieldValue object (named tuple) with attributes for each field_name.
         """
         FieldValue = namedtuple('FieldValue', field_names)
 
@@ -401,13 +373,10 @@ class OperationalItem:
         """
         Retrieve operational item data from vManage API with exception handling.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments passed to get_raise.
-            **kwargs: Keyword arguments passed to get_raise.
-            
-        Returns:
-            OperationalItem instance or None if retrieval fails due to timeout or API error.
+        @param api: Rest API client instance.
+        @param args: Positional arguments passed to get_raise.
+        @param kwargs: Keyword arguments passed to get_raise.
+        @return: OperationalItem instance or None if retrieval fails due to timeout or API error.
         """
         try:
             instance = cls.get_raise(api, *args, **kwargs)
@@ -425,23 +394,28 @@ class OperationalItem:
         This method must be implemented by subclasses to define the specific
         API call and data retrieval logic.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments for the API call.
-            **kwargs: Keyword arguments for the API call.
-            
-        Returns:
-            OperationalItem instance with retrieved data.
-            
-        Raises:
-            NotImplementedError: This method must be implemented by subclasses.
+        @param api: Rest API client instance.
+        @param args: Positional arguments for the API call.
+        @param kwargs: Keyword arguments for the API call.
+        @return: OperationalItem instance with retrieved data.
+        @raises NotImplementedError: This method must be implemented by subclasses.
         """
         raise NotImplementedError()
 
     def __str__(self) -> str:
+        """
+        Return a formatted JSON string representation of the operational item data.
+        
+        @return: JSON formatted string with 2-space indentation.
+        """
         return json.dumps(self._data, indent=2)
 
     def __repr__(self) -> str:
+        """
+        Return a compact JSON string representation of the operational item data.
+        
+        @return: Compact JSON formatted string without indentation.
+        """
         return json.dumps(self._data)
 
 
@@ -459,8 +433,7 @@ class RealtimeItem(OperationalItem):
         """
         Initialize RealtimeItem with API response payload.
         
-        Args:
-            payload: API response payload containing real-time monitoring data.
+        @param payload: API response payload containing real-time monitoring data.
         """
         super().__init__(payload)
 
@@ -469,13 +442,10 @@ class RealtimeItem(OperationalItem):
         """
         Retrieve real-time item data from vManage API.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments, typically deviceId.
-            **kwargs: Keyword arguments for the API call.
-            
-        Returns:
-            RealtimeItem instance with retrieved real-time data.
+        @param api: Rest API client instance.
+        @param args: Positional arguments, typically deviceId.
+        @param kwargs: Keyword arguments for the API call.
+        @return: RealtimeItem instance with retrieved real-time data.
         """
         params = kwargs or dict(zip(cls.api_params, args))
         return cls(api.get(cls.api_path.get, **params))
@@ -488,11 +458,8 @@ class RealtimeItem(OperationalItem):
         Subclasses need to overwrite this method when the realtime API endpoint that it 
         represents is specific to certain device models. For example, vEdge vs. cEdges.
         
-        Args:
-            device_model: Device model string to check compatibility.
-            
-        Returns:
-            bool: True if this RealtimeItem applies to the device model, False otherwise.
+        @param device_model: Device model string to check compatibility.
+        @return: True if this RealtimeItem applies to the device model, False otherwise.
         """
         return True
 
@@ -509,6 +476,11 @@ class BulkStatsItem(OperationalItem):
     field_entry_time = 'entry_time'
 
     def __init__(self, payload: Mapping[str, Any]) -> None:
+        """
+        Initialize BulkStatsItem with API response payload.
+        
+        @param payload: API response payload containing bulk statistics data and pagination info.
+        """
         super().__init__(payload)
         self._page_info = payload['pageInfo']
 
@@ -517,8 +489,7 @@ class BulkStatsItem(OperationalItem):
         """
         Get the scroll ID for the next page of bulk statistics data.
         
-        Returns:
-            str or None: Scroll ID for next page if more data is available, None otherwise.
+        @return: Scroll ID for next page if more data is available, None otherwise.
         """
         return self._page_info['scrollId'] if self._page_info['hasMoreData'] else None
 
@@ -526,8 +497,7 @@ class BulkStatsItem(OperationalItem):
         """
         Add additional page data to the current bulk statistics item.
         
-        Args:
-            payload: API response payload containing additional page data.
+        @param payload: API response payload containing additional page data.
         """
         self._data.extend(payload['data'])
         self._page_info = payload['pageInfo']
@@ -537,13 +507,10 @@ class BulkStatsItem(OperationalItem):
         """
         Retrieve bulk statistics data from vManage API with automatic pagination.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments for the API call.
-            **kwargs: Keyword arguments for the API call.
-            
-        Returns:
-            BulkStatsItem instance with all paginated data retrieved.
+        @param api: Rest API client instance.
+        @param *args: Positional arguments for the API call.
+        @param **kwargs: Keyword arguments for the API call.
+        @return: BulkStatsItem instance with all paginated data retrieved.
         """
         params = kwargs or dict(zip(cls.api_params, args))
         obj = cls(api.get(cls.api_path.get, **params))
@@ -563,11 +530,8 @@ class BulkStatsItem(OperationalItem):
         
         Subclasses need to override this as needed for the particular endpoint in question.
         
-        Args:
-            sample: Named tuple representing a single data sample.
-            
-        Returns:
-            str: Key used to group samples into time series, defaults to device name.
+        @param sample: Named tuple representing a single data sample.
+        @return: Key used to group samples into time series, defaults to device name.
         """
         return sample.vdevice_name
 
@@ -576,12 +540,9 @@ class BulkStatsItem(OperationalItem):
         """
         Filter samples to include only those from the last n seconds.
         
-        Args:
-            n_secs: Number of seconds to look back from the newest sample.
-            sample_list: Sequence of samples sorted by entry_time (newest first).
-            
-        Yields:
-            namedtuple: Samples within the specified time window.
+        @param n_secs: Number of seconds to look back from the newest sample.
+        @param sample_list: Sequence of samples sorted by entry_time (newest first).
+        @return: Samples within the specified time window.
         """
         yield sample_list[0]
 
@@ -596,12 +557,9 @@ class BulkStatsItem(OperationalItem):
         """
         Calculate average values for specified fields across a list of samples.
         
-        Args:
-            sample_list: Sequence of samples to average.
-            fields_to_avg: Field names to calculate averages for.
-            
-        Returns:
-            dict: Dictionary mapping field names to their average values.
+        @param sample_list: Sequence of samples to average.
+        @param fields_to_avg: Field names to calculate averages for.
+        @return: Dictionary mapping field names to their average values.
         """
         def average(values):
             avg = sum(values) / len(values)
@@ -666,23 +624,51 @@ class BulkStateItem(OperationalItem):
     field_node_id = 'vdevice_name'
 
     def __init__(self, payload: Mapping[str, Any]) -> None:
+        """
+        Initialize BulkStateItem with payload data and pagination information.
+        
+        @param payload: Dictionary containing bulk state data and pagination info
+        """
         super().__init__(payload)
         self._page_info = payload['pageInfo']
 
     @property
     def next_page(self) -> Union[str, None]:
+        """
+        Get the next page identifier for pagination.
+        
+        @return: Next page end ID if more entries exist, None otherwise
+        """
         return self._page_info['endId'] if self._page_info['moreEntries'] else None
 
     def add_payload(self, payload: Mapping[str, Any]) -> None:
+        """
+        Add payload data to extend existing data and update pagination info.
+        
+        @param payload: Dictionary containing additional data and updated pagination info
+        """
         self._data.extend(payload['data'])
         self._page_info = payload['pageInfo']
 
     @property
     def page_item_count(self) -> int:
+        """
+        Get the count of items in the current page.
+        
+        @return: Number of items in the current page
+        """
         return self._page_info['count']
 
     @classmethod
     def get_raise(cls, api: Rest, *args, **kwargs):
+        """
+        Retrieve all pages of bulk state data from the API.
+        
+        @param api: REST API client instance
+        @param args: Positional arguments for API parameters
+        @param kwargs: Keyword arguments for API parameters
+        @return: Instance containing all paginated data
+        """
         params = kwargs or dict(zip(cls.api_params, args))
         obj = cls(api.get(cls.api_path.get, **params))
         while True:
@@ -699,11 +685,8 @@ def entry_time_parse(timestamp: str) -> datetime:
     """
     Parse a timestamp string into a datetime object.
     
-    Args:
-        timestamp: Timestamp string in milliseconds since epoch.
-        
-    Returns:
-        datetime: Parsed datetime object in UTC timezone.
+    @param timestamp: Timestamp string in milliseconds since epoch
+    @return: Parsed datetime object in UTC timezone
     """
     return datetime.fromtimestamp(float(timestamp) / 1000, tz=timezone.utc)
 
@@ -714,6 +697,11 @@ class RecordItem(OperationalItem):
     QUERY_SIZE_MAX = 10000
 
     def __init__(self, payload: Mapping[str, Any]) -> None:
+        """
+        Initialize RecordItem with payload data and pagination info.
+        
+        @param payload: Dictionary containing record data and pagination information
+        """
         super().__init__(payload)
         self._page_info = payload['pageInfo']
 
@@ -752,6 +740,11 @@ class RecordItem(OperationalItem):
 
     @property
     def next_page(self) -> Union[datetime, None]:
+        """
+        Get the next page datetime for pagination.
+        
+        @return: Next page datetime if more entries exist, None otherwise
+        """
         if 'endTime' not in self._page_info or self.page_item_count < RecordItem.QUERY_SIZE_MAX:
             return None
 
@@ -759,15 +752,34 @@ class RecordItem(OperationalItem):
         return entry_time_parse(self._page_info['endTime'])
 
     def add_payload(self, payload: Mapping[str, Any]) -> None:
+        """
+        Add payload data to extend existing data and update pagination info.
+        
+        @param payload: Dictionary containing additional data and updated pagination info
+        """
         self._data.extend(payload['data'])
         self._page_info = payload['pageInfo']
 
     @property
     def page_item_count(self) -> int:
+        """
+        Get the count of items in the current page.
+        
+        @return: Number of items in the current page
+        """
         return self._page_info['count']
 
     @classmethod
     def get_raise(cls, api: Rest, *, start_time: datetime = None, end_time: datetime = None, max_records: int = 0):
+        """
+        Retrieve record items from vManage with pagination support.
+        
+        @param api: REST API client for vManage communication
+        @param start_time: Starting date time for the query, i.e., oldest
+        @param end_time: End date time for the query, i.e., newest
+        @param max_records: Maximum number of records to return
+        @return: RecordItem instance containing retrieved records
+        """
         obj = cls(api.post(cls.query(start_time, end_time, max_records), cls.api_path.post))
         while True:
             next_page = obj.next_page
@@ -784,11 +796,8 @@ def attribute_safe(raw_attribute):
     """
     Convert a raw attribute name to a safe Python attribute name.
     
-    Args:
-        raw_attribute: Raw attribute name that may contain invalid characters.
-        
-    Returns:
-        str: Safe attribute name with non-alphanumeric characters replaced by underscores.
+    @param raw_attribute: Raw attribute name that may contain invalid characters
+    @return: Safe attribute name with non-alphanumeric characters replaced by underscores
     """
     return re.sub(r'\W', '_', raw_attribute, flags=re.ASCII)
 
@@ -813,8 +822,7 @@ class ApiItem:
         """
         Get the unique identifier for this API item.
         
-        Returns:
-            str or None: UUID of the item if id_tag is defined, None otherwise.
+        @return: UUID of the item if id_tag is defined, None otherwise
         """
         return self.data[self.id_tag] if self.id_tag is not None else None
 
@@ -823,8 +831,7 @@ class ApiItem:
         """
         Get the name of this API item.
         
-        Returns:
-            str or None: Name of the item if name_tag is defined, None otherwise.
+        @return: Name of the item if name_tag is defined, None otherwise
         """
         return self.data[self.name_tag] if self.name_tag is not None else None
 
@@ -833,8 +840,7 @@ class ApiItem:
         """
         Check if this API item contains no data.
         
-        Returns:
-            bool: True if data is None or empty, False otherwise.
+        @return: True if data is None or empty, False otherwise
         """
         return self.data is None or len(self.data) == 0
 
@@ -843,13 +849,10 @@ class ApiItem:
         """
         Retrieve API item data with exception handling.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments passed to get_raise.
-            **kwargs: Keyword arguments passed to get_raise.
-            
-        Returns:
-            ApiItem instance or None if retrieval fails due to API error.
+        @param api: Rest API client instance
+        @param args: Positional arguments passed to get_raise
+        @param kwargs: Keyword arguments passed to get_raise
+        @return: ApiItem instance or None if retrieval fails due to API error
         """
         try:
             return cls.get_raise(api, *args, **kwargs)
@@ -861,16 +864,11 @@ class ApiItem:
         """
         Retrieve API item data from vManage API.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments for the API call.
-            **kwargs: Keyword arguments for the API call, including path variables.
-            
-        Returns:
-            ApiItem instance with retrieved data.
-            
-        Raises:
-            RestAPIException: If the API call fails.
+        @param api: Rest API client instance
+        @param args: Positional arguments for the API call
+        @param kwargs: Keyword arguments for the API call, including path variables
+        @return: ApiItem instance with retrieved data
+        @raises RestAPIException: If the API call fails
         """
         # Extract path vars from kwargs, what is left becomes query vars
         path_vars_map = {}
@@ -883,9 +881,19 @@ class ApiItem:
         return cls(api.get(cls.api_path.resolve(**path_vars_map).get, *args, **kwargs))
 
     def __str__(self):
+        """
+        Return a string representation of the API item data.
+        
+        @return: JSON string representation of the item data with indentation
+        """
         return json.dumps(self.data, indent=2)
 
     def __repr__(self):
+        """
+        Return a compact string representation of the API item data.
+        
+        @return: JSON string representation of the item data without indentation
+        """
         return json.dumps(self.data)
 
 
@@ -901,8 +909,7 @@ class IndexApiItem(ApiItem):
         """
         Initialize IndexApiItem with API data.
         
-        Args:
-            data: Dictionary containing the information to be associated with this API item.
+        @param data: Dictionary containing the information to be associated with this API item
         """
         super().__init__(data.get('data') if isinstance(data, dict) else data)
 
@@ -915,12 +922,9 @@ class IndexApiItem(ApiItem):
         """
         Returns an iterator where each entry is the value of the respective field in iter_fields.
         
-        Args:
-            iter_fields: Field names to extract from each entry.
-            default: Value to return for any field missing in an entry. Default is None.
-            
-        Returns:
-            Iterator: Iterator of entries in the index object.
+        @param iter_fields: Field names to extract from each entry
+        @param default: Value to return for any field missing in an entry. Default is None
+        @return: Iterator of entries in the index object
         """
         return (default_getter(*iter_fields, default=default)(entry) for entry in self.data)
 
@@ -928,8 +932,7 @@ class IndexApiItem(ApiItem):
         """
         Default iterator using the class-defined iter_fields.
         
-        Returns:
-            Iterator: Iterator over entries using iter_fields.
+        @return: Iterator over entries using iter_fields
         """
         return self.iter(*self.iter_fields)
 
@@ -937,11 +940,8 @@ class IndexApiItem(ApiItem):
         """
         Returns an iterator where each entry is composed of the combined fields of iter_fields and extended_iter_fields.
         
-        Args:
-            default: Value to return for any field missing in an entry. Default is None.
-            
-        Returns:
-            Iterator: Iterator of entries in the index object with extended fields.
+        @param default: Value to return for any field missing in an entry. Default is None
+        @return: Iterator of entries in the index object with extended fields
         """
         return self.iter(*self.iter_fields, *self.extended_iter_fields, default=default)
 
@@ -971,11 +971,8 @@ class ConfigItem(ApiItem):
         """
         Compare this ConfigItem with another payload for equality.
         
-        Args:
-            other_payload: Another configuration payload to compare against.
-            
-        Returns:
-            bool: True if the configurations are equal (excluding comparison-skipped fields), False otherwise.
+        @param other_payload: Another configuration payload to compare against
+        @return: True if the configurations are equal (excluding comparison-skipped fields), False otherwise
         """
         exclude_set = self.skip_cmp_tag_set | {self.id_tag}
 
@@ -989,8 +986,7 @@ class ConfigItem(ApiItem):
         """
         Check if this configuration item is read-only.
         
-        Returns:
-            bool: True if the item is factory default or marked as read-only, False otherwise.
+        @return: True if the item is factory default or marked as read-only, False otherwise
         """
         return self.data.get(self.factory_default_tag, False) or self.data.get(self.readonly_tag, False)
 
@@ -999,8 +995,7 @@ class ConfigItem(ApiItem):
         """
         Check if this configuration item is a system-owned item.
         
-        Returns:
-            bool: True if the item is owned by system or has ACI info tag, False otherwise.
+        @return: True if the item is owned by system or has ACI info tag, False otherwise
         """
         return self.data.get(self.owner_tag, '') == 'system' or self.data.get(self.info_tag, '') == 'aci'
 
@@ -1009,8 +1004,7 @@ class ConfigItem(ApiItem):
         """
         Get the type of this configuration item.
         
-        Returns:
-            str or None: Type of the configuration item if type_tag is defined, None otherwise.
+        @return: Type of the configuration item if type_tag is defined, None otherwise
         """
         return self.data.get(self.type_tag)
 
@@ -1019,13 +1013,10 @@ class ConfigItem(ApiItem):
         """
         Generate filename for storing this configuration item.
         
-        Args:
-            ext_name: True if item names need to be extended with UUID for uniqueness.
-            item_name: Name of the configuration item.
-            item_id: UUID of the configuration item.
-            
-        Returns:
-            str: Generated filename for the configuration item.
+        @param ext_name: True if item names need to be extended with UUID for uniqueness
+        @param item_name: Name of the configuration item
+        @param item_id: UUID of the configuration item
+        @return: Generated filename for the configuration item
         """
         if item_name is None or item_id is None:
             # Assume store_file does not have variables
@@ -1070,15 +1061,11 @@ class ConfigItem(ApiItem):
         """
         Save data (i.e. self.data) to a JSON file.
 
-        Args:
-            node_dir: String indicating directory under root_dir used for all files from a given vManage node.
-            ext_name: True indicates that item_names need to be extended (with item_id) to make their
-                     filename safe version unique. False otherwise.
-            item_name: (Optional) Name of the item being saved. Variable used to build the filename.
-            item_id: (Optional) UUID for the item being saved. Variable used to build the filename.
-            
-        Returns:
-            bool: True indicates data has been saved. False indicates no data to save (and no file has been created).
+        @param node_dir: String indicating directory under root_dir used for all files from a given vManage node
+        @param ext_name: True indicates that item_names need to be extended (with item_id) to make their filename safe version unique. False otherwise
+        @param item_name: (Optional) Name of the item being saved. Variable used to build the filename
+        @param item_id: (Optional) UUID for the item being saved. Variable used to build the filename
+        @return: True indicates data has been saved. False indicates no data to save (and no file has been created)
         """
         if self.is_empty:
             return False
@@ -1150,8 +1137,7 @@ class ConfigItem(ApiItem):
         """
         Return all references to other item ids by this item.
         
-        Returns:
-            set: Set containing id-based references found in the item data.
+        @return: Set containing id-based references found in the item data
         """
         filtered_keys = {
             self.id_tag,
@@ -1166,8 +1152,7 @@ class ConfigItem(ApiItem):
         """
         Extracts values that have been encrypted by vManage.
         
-        Returns:
-            Iterator[str]: Iterator over encrypted values with $CRYPT_CLUSTER$ prefix.
+        @return: Iterator over encrypted values with $CRYPT_CLUSTER$ prefix
         """
         yield from re.findall(r'\$CRYPT_CLUSTER\$.+?(?=["\s\\])', json.dumps(self.data))
 
@@ -1176,11 +1161,8 @@ class ConfigItem(ApiItem):
         """
         Validate if a proposed name meets the naming requirements.
         
-        Args:
-            proposed_name: Name to validate.
-            
-        Returns:
-            bool: True if the name is valid, False otherwise.
+        @param proposed_name: Name to validate
+        @return: True if the name is valid, False otherwise
         """
         return proposed_name is not None and cls.name_check_regex.search(proposed_name) is not None
 
@@ -1190,12 +1172,9 @@ class ConfigItem(ApiItem):
         
         Matched values that are dict or list are not included.
         
-        Args:
-            key: Key to search for in the data structure.
-            from_key: Top-level key under which to start the search.
-            
-        Returns:
-            list: List of values found for the specified key.
+        @param key: Key to search for in the data structure
+        @param from_key: Top-level key under which to start the search
+        @return: List of values found for the specified key
         """
         match_list = []
 
@@ -1227,8 +1206,7 @@ class IndexConfigItem(ConfigItem):
         """
         Initialize IndexConfigItem with configuration data.
         
-        Args:
-            data: Dictionary containing the information to be associated with this configuration item.
+        @param data: Dictionary containing the information to be associated with this configuration item
         """
         super().__init__(data.get('data') if isinstance(data, dict) else data)
 
@@ -1256,12 +1234,9 @@ class IndexConfigItem(ConfigItem):
         """
         Create an IndexConfigItem from a list of ConfigItem instances.
         
-        Args:
-            item_list: Sequence of ConfigItem instances to create index from.
-            id_hint_dict: Dictionary providing ID hints for items by name.
-            
-        Returns:
-            IndexConfigItem: New index instance containing the provided items.
+        @param item_list: Sequence of ConfigItem instances to create index from
+        @param id_hint_dict: Dictionary providing ID hints for items by name
+        @return: New index instance containing the provided items
         """
         def index_entry_dict(item_obj: ConfigItem):
             return {
@@ -1319,8 +1294,7 @@ class FeatureProfileModel(ConfigRequestModel):
         """
         Initialize FeatureProfileModel with name field normalization.
         
-        Args:
-            **kwargs: Keyword arguments including name or profileName.
+        @param **kwargs: Keyword arguments including name or profileName
         """
         name = kwargs.pop('name', None) or kwargs.pop('profileName', None)
         if name is not None:
@@ -1378,11 +1352,8 @@ class Config2Item(ConfigItem):
         """
         Compare this Config2Item with another payload for equality using Pydantic models.
         
-        Args:
-            other: Another configuration payload to compare against.
-            
-        Returns:
-            bool: True if the configurations are equal (excluding comparison-skipped fields), False otherwise.
+        @param other: Another configuration payload to compare against
+        @return: True if the configurations are equal (excluding comparison-skipped fields), False otherwise
         """
         exclude_set = self.skip_cmp_tag_set | {self.id_tag}
         put_model = self.put_model or self.post_model
@@ -1399,12 +1370,8 @@ class Config2Item(ConfigItem):
         From "self.data", perform item id replacements defined in id_mapping_dict, 
         also remove item id and rename item with new_name (if provided).
         
-        Args:
-            id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced
-                            with <new item id>
-                            
-        Returns:
-            dict: Dictionary containing payload for POST requests.
+        @param id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced with <new item id>
+        @return: Dictionary containing payload for POST requests
         """
         return self._op_data(self.post_model, id_mapping_dict)
 
@@ -1414,12 +1381,8 @@ class Config2Item(ConfigItem):
         
         From "self.data", perform item id replacements defined in id_mapping_dict.
         
-        Args:
-            id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced
-                            with <new item id>
-                            
-        Returns:
-            dict: Dictionary containing payload for PUT requests.
+        @param id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced with <new item id>
+        @return: Dictionary containing payload for PUT requests
         """
         put_model = self.put_model or self.post_model
         return self._op_data(put_model, id_mapping_dict)
@@ -1430,12 +1393,8 @@ class Config2Item(ConfigItem):
         
         From "self.data", perform item id replacements defined in id_mapping_dict.
         
-        Args:
-            id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced
-                            with <new item id>
-                            
-        Returns:
-            dict: Dictionary containing payload for DELETE requests.
+        @param id_mapping_dict: {<old item id>: <new item id>} dict. If provided, <old item id> matches are replaced with <new item id>
+        @return: Dictionary containing payload for DELETE requests
         """
         delete_model = self.delete_model or self.put_model or self.post_model
         return self._op_data(delete_model, id_mapping_dict)
@@ -1445,12 +1404,9 @@ class Config2Item(ConfigItem):
         """
         Internal method to build operation data using Pydantic models.
         
-        Args:
-            op_model: Pydantic model class to use for data validation and serialization.
-            id_mapping_dict: Optional ID mapping dictionary for ID replacements.
-            
-        Returns:
-            dict: Dictionary containing the operation payload.
+        @param op_model: Pydantic model class to use for data validation and serialization
+        @param id_mapping_dict: Optional ID mapping dictionary for ID replacements
+        @return: Dictionary containing the operation payload
         """
         payload = op_model(**self.data)
 
@@ -1481,8 +1437,7 @@ class FeatureProfile(Config2Item):
         """
         Initialize FeatureProfile with profile data.
         
-        Args:
-            data: Dictionary containing feature profile data including parcels.
+        @param data: Dictionary containing feature profile data including parcels
         """
         super().__init__(data)
 
@@ -1494,8 +1449,7 @@ class FeatureProfile(Config2Item):
         """
         Check if this feature profile is a system-owned profile.
         
-        Returns:
-            bool: True if the profile is system-owned, False otherwise.
+        @return: True if the profile is system-owned, False otherwise
         """
         return super().is_system or self.data.get(self.created_by_tag, '') == 'system'
 
@@ -1503,8 +1457,7 @@ class FeatureProfile(Config2Item):
         """
         Get iterator over parcel ID mappings from old to new IDs.
         
-        Returns:
-            Iterator[tuple[str, str]]: Iterator of (old_parcel_id, new_parcel_id) tuples.
+        @return: Iterator of (old_parcel_id, new_parcel_id) tuples
         """
         return ((old_parcel_id, new_parcel_id) for old_parcel_id, new_parcel_id in self._id_mapping.items())
 
@@ -1513,8 +1466,7 @@ class FeatureProfile(Config2Item):
         """
         Get iterator over parsed parcel models in this feature profile.
         
-        Returns:
-            Iterator[ProfileParcelModel]: Iterator of ProfileParcelModel instances.
+        @return: Iterator of ProfileParcelModel instances
         """
         return (ProfileParcelModel(**raw_parcel) for raw_parcel in self.data.get(self.parcels_tag, []))
 
@@ -1522,9 +1474,8 @@ class FeatureProfile(Config2Item):
         """
         Update parcel data by retrieving detailed information from vManage API.
         
-        Args:
-            api: Rest API client instance.
-            profile_id: Feature profile ID to use for API calls.
+        @param api: Rest API client instance
+        @param profile_id: Feature profile ID to use for API calls
         """
         def eval_parcel(parcel: ProfileParcelModel, *element_ids: str, parent_parcel_type: Optional[str] = None):
             api_path, _ = self.parcel_api_paths.api_path(PathKey(parcel.parcelType, parent_parcel_type))
@@ -1558,15 +1509,9 @@ class FeatureProfile(Config2Item):
         """
         Generate associated parcels for this feature profile.
         
-        Args:
-            new_profile_id: New profile ID to use for parcel operations.
-            merge_profile: Optional profile to merge with, parcels from this profile are excluded.
-            
-        Yields:
-            tuple[ApiPath, str, dict]: Tuples of (api_path, parcel_info, parcel_payload).
-            
-        Returns:
-            str: New element ID sent back from the generator consumer.
+        @param new_profile_id: New profile ID to use for parcel operations
+        @param merge_profile: Optional profile to merge with, parcels from this profile are excluded
+        @return: Generator that yields tuples of (api_path, parcel_info, parcel_payload) and returns new element ID sent back from the generator consumer
         """
         def parcel_ordering(parcel_obj):
             if self.parcel_api_paths.is_referenced_type(parcel_obj.parcelType):
@@ -1592,17 +1537,11 @@ class FeatureProfile(Config2Item):
         Iterate over Config 2.0 feature profile parcels, starting with the provided parcel and recursively checking
         sub-parcels it may contain.
         
-        Args:
-            parcel: Parcel to be iterated over.
-            element_ids: Element IDs used to resolve path variables. The first one is the feature profile ID. 
-                        Parcels with sub-parcels have their IDs included as well.
-            parent_parcel_type: Parcel type of the parent, or None if this is a root parcel.
-            
-        Yields:
-            tuple[ApiPath, str, dict]: Tuples of (parcel api path, parcel info, parcel payload).
-            
-        Returns:
-            str: New element id, used to resolve the api path.
+        @param parcel: Parcel to be iterated over
+        @param element_ids: Element IDs used to resolve path variables. The first one is the feature profile ID. Parcels with sub-parcels have their IDs included as well
+        @param parent_parcel_type: Parcel type of the parent, or None if this is a root parcel
+        @yields: tuple[ApiPath, str, dict]: Tuples of (parcel api path, parcel info, parcel payload)
+        @return: New element id, used to resolve the api path
         """
         api_path, is_reference = self.parcel_api_paths.api_path(PathKey(parcel.parcelType, parent_parcel_type))
         if api_path is None:
@@ -1640,16 +1579,11 @@ class FeatureProfile(Config2Item):
         """
         Retrieve feature profile data from vManage API with parcel data population.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments for the API call.
-            **kwargs: Keyword arguments for the API call, including path variables.
-            
-        Returns:
-            FeatureProfile: FeatureProfile instance with retrieved data and populated parcels.
-            
-        Raises:
-            RestAPIException: If the API call fails.
+        @param api: Rest API client instance
+        @param *args: Positional arguments for the API call
+        @param **kwargs: Keyword arguments for the API call, including path variables
+        @return: FeatureProfile instance with retrieved data and populated parcels
+        @raises RestAPIException: If the API call fails
         """
         # Extract path vars from kwargs, what is left becomes query vars
         path_vars_map = {}
@@ -1693,9 +1627,7 @@ class AdminSettingsItem(ConfigItem):
         """
         Initialize AdminSettingsItem with settings data.
         
-        Args:
-            data: Dictionary containing the information to be associated with this API item.
-                 Expected format: {'data': [{'setting': 'value', ...}]}
+        @param data: Dictionary containing the information to be associated with this API item. Expected format: {'data': [{'setting': 'value', ...}]}
         """
         # Get requests returns a dict as {'data': [{'domainIp': 'vbond.cisco.com', 'port': '12346'}]}
         super().__init__(data.get('data', [''])[0])
@@ -1705,16 +1637,11 @@ class AdminSettingsItem(ConfigItem):
         """
         Retrieve administrative settings data from vManage API.
         
-        Args:
-            api: Rest API client instance.
-            *args: Positional arguments for the API call.
-            **kwargs: Keyword arguments for the API call, including setting parameter.
-            
-        Returns:
-            AdminSettingsItem: AdminSettingsItem instance with retrieved settings data.
-            
-        Raises:
-            RestAPIException: If the API call fails.
+        @param api: Rest API client instance
+        @param *args: Positional arguments for the API call
+        @param **kwargs: Keyword arguments for the API call, including setting parameter
+        @return: AdminSettingsItem instance with retrieved settings data
+        @raises RestAPIException: If the API call fails
         """
         setting = kwargs.pop(cls.setting, None) or cls.setting
 
@@ -1735,8 +1662,7 @@ class ServerInfo:
         """
         Initialize ServerInfo with server information.
         
-        Args:
-            **kwargs: Key-value pairs of information about the vManage server.
+        @param **kwargs: Key-value pairs of information about the vManage server
         """
         self.data = kwargs
 
@@ -1744,14 +1670,9 @@ class ServerInfo:
         """
         Provide dynamic attribute access to server information data.
         
-        Args:
-            item: Attribute name to retrieve from server data.
-            
-        Returns:
-            Any: Value associated with the requested attribute.
-            
-        Raises:
-            AttributeError: If the requested attribute does not exist in the data.
+        @param item: Attribute name to retrieve from server data
+        @return: Value associated with the requested attribute
+        @raises AttributeError: If the requested attribute does not exist in the data
         """
         attr = self.data.get(item)
         if attr is None:
@@ -1763,14 +1684,9 @@ class ServerInfo:
         """
         Factory method that loads data from a JSON file and returns a ServerInfo instance with that data.
 
-        Args:
-            node_dir: String indicating directory under root_dir used for all files from a given vManage node.
-            
-        Returns:
-            ServerInfo: ServerInfo object with loaded data, or None if the file does not exist.
-            
-        Raises:
-            ModelException: If the JSON file is invalid or corrupted.
+        @param node_dir: String indicating directory under root_dir used for all files from a given vManage node
+        @return: ServerInfo object with loaded data, or None if the file does not exist
+        @raises ModelException: If the JSON file is invalid or corrupted
         """
         dir_path = Path(cls.root_dir, node_dir)
         file_path = dir_path.joinpath(cls.store_file)
@@ -1788,11 +1704,8 @@ class ServerInfo:
         """
         Save data (i.e. self.data) to a JSON file.
 
-        Args:
-            node_dir: String indicating directory under root_dir used for all files from a given vManage node.
-            
-        Returns:
-            bool: True indicates data has been saved. False indicates no data to save (and no file has been created).
+        @param node_dir: String indicating directory under root_dir used for all files from a given vManage node
+        @return: True indicates data has been saved. False indicates no data to save (and no file has been created)
         """
         dir_path = Path(self.root_dir, node_dir)
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -1810,12 +1723,9 @@ def filename_safe(name: str, lower: bool = False) -> str:
     Any char that is not a-z, A-Z, 0-9, '_', ' ', or '-' is replaced with '_'. 
     Convert to lowercase if lower=True.
     
-    Args:
-        name: Name string to be converted.
-        lower: If True, apply str.lower() to result.
-        
-    Returns:
-        str: String containing the filename-safe version of item_name.
+    @param name: Name string to be converted
+    @param lower: If True, apply str.lower() to result
+    @return: String containing the filename-safe version of item_name
     """
     # Inspired by Django's slugify function
     cleaned = re.sub(r'[^\w\s-]', '_', name, flags=re.ASCII)
@@ -1826,12 +1736,9 @@ def update_ids(id_map: Mapping[str, str], item_data: Mapping[str, Any]) -> dict[
     """
     Update UUID references in item data using the provided ID mapping.
     
-    Args:
-        id_map: Dictionary mapping old UUIDs to new UUIDs.
-        item_data: Configuration data that may contain UUID references.
-        
-    Returns:
-        dict: Updated configuration data with UUIDs replaced according to the mapping.
+    @param id_map: Dictionary mapping old UUIDs to new UUIDs
+    @param item_data: Configuration data that may contain UUID references
+    @return: Updated configuration data with UUIDs replaced according to the mapping
     """
     def replace_id(match):
         matched_id = match.group(0)
@@ -1846,12 +1753,9 @@ def update_crypts(crypt_map: Mapping[str, str], item_data: Mapping[str, Any]) ->
     """
     Update encrypted values in item data using the provided crypt mapping.
     
-    Args:
-        crypt_map: Dictionary mapping old encrypted values to new encrypted values.
-        item_data: Configuration data that may contain encrypted values.
-        
-    Returns:
-        dict: Updated configuration data with encrypted values replaced according to the mapping.
+    @param crypt_map: Dictionary mapping old encrypted values to new encrypted values
+    @param item_data: Configuration data that may contain encrypted values
+    @return: Updated configuration data with encrypted values replaced according to the mapping
     """
     def replace_crypt(match):
         matched_crypt = match.group(0)
@@ -1875,8 +1779,7 @@ class ExtendedTemplate:
         """
         Initialize ExtendedTemplate with a name regex pattern.
         
-        Args:
-            name_regex: Template string containing {name} variables with optional regex patterns.
+        @param name_regex: Template string containing {name} variables with optional regex patterns
         """
         self.src_template = name_regex
         self.label_value_map = None
@@ -1885,14 +1788,9 @@ class ExtendedTemplate:
         """
         Process the template to generate a new name from the input name.
         
-        Args:
-            name: Current item name to transform.
-            
-        Returns:
-            str: New name generated from item name using the name_regex template.
-            
-        Raises:
-            ValueError: When issues are encountered while processing the name_regex.
+        @param name: Current item name to transform
+        @return: New name generated from item name using the name_regex template
+        @raises ValueError: When issues are encountered while processing the name_regex
         """
 
         def regex_replace(match_obj):
@@ -1932,12 +1830,9 @@ def default_getter(*fields: str, default: Any = None) -> Callable:
     """
     Create a getter function that extracts specified fields from objects with default values.
     
-    Args:
-        fields: Field names to extract from objects.
-        default: Default value to return when a field is missing.
-        
-    Returns:
-        Callable: Function that takes an object and returns the requested field values.
+    @param fields: Field names to extract from objects
+    @param default: Default value to return when a field is missing
+    @return: Function that takes an object and returns the requested field values
     """
     if len(fields) == 1:
         def getter_fn(obj):
